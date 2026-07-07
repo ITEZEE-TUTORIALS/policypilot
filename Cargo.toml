@@ -1,0 +1,8 @@
+[package]
+name = "policypilot"
+version = "0.1.0"
+edition = "2021"
+description = "A Rust RAG demo for answering policy and handbook questions."
+license = "MIT"
+
+[dependencies]
