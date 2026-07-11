@@ -4,6 +4,7 @@ use std::net::{TcpListener, TcpStream};
 
 use crate::app;
 use crate::answer::AnswerReport;
+use crate::ingest;
 
 const DEFAULT_ADDR: &str = "127.0.0.1:7878";
 const INDEX_HTML: &str = include_str!("../assets/ui/index.html");
@@ -59,6 +60,10 @@ fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
         ("GET", "/styles.css") => http_response(200, "text/css; charset=utf-8", STYLES_CSS),
         ("GET", "/app.js") => http_response(200, "application/javascript; charset=utf-8", APP_JS),
         ("GET", "/health") => http_response(200, "text/plain; charset=utf-8", "ok"),
+        ("GET", "/api/policies") => {
+            let body = render_policies_json();
+            http_response(200, "application/json; charset=utf-8", &body)
+        }
         ("GET", "/api/answer") => {
             let question = query_param(target, "question")
                 .filter(|value| !value.trim().is_empty())
@@ -130,6 +135,28 @@ fn render_report_json(report: &AnswerReport) -> String {
 
     json.push(']');
     json.push('}');
+    json
+}
+
+fn render_policies_json() -> String {
+    let documents = ingest::load_demo_documents();
+    let mut json = String::from("[");
+
+    for (index, document) in documents.iter().enumerate() {
+        if index > 0 {
+            json.push(',');
+        }
+
+        json.push('{');
+        push_json_field(&mut json, "id", document.id);
+        json.push(',');
+        push_json_field(&mut json, "title", document.title);
+        json.push(',');
+        push_json_field(&mut json, "body", document.body);
+        json.push('}');
+    }
+
+    json.push(']');
     json
 }
 

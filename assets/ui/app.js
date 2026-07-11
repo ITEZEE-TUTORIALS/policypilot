@@ -28,6 +28,10 @@ const thinkingSteps = [
 ];
 
 const stateKey = "policypilot-chat-history";
+const policyCatalogState = {
+  docs: null,
+  promise: null
+};
 const historyEl = document.getElementById("chat-history");
 const form = document.getElementById("question-form");
 const questionInput = document.getElementById("question");
@@ -36,11 +40,14 @@ const clearButton = document.getElementById("clear-chat");
 const exportButton = document.getElementById("export-chat");
 const thinkingToggle = document.getElementById("toggle-thinking");
 const thinkingToggleLabel = document.getElementById("thinking-toggle-label");
+const aiToggle = document.getElementById("toggle-ai");
+const aiToggleLabel = document.getElementById("ai-toggle-label");
 const turnCountEl = document.getElementById("turn-count");
 
 const state = loadState();
 
 renderThinkingToggle();
+renderAiToggle();
 renderSamples();
 renderHistory();
 
@@ -109,11 +116,23 @@ thinkingToggle.addEventListener("click", () => {
   renderThinkingToggle();
 });
 
+aiToggle.addEventListener("click", () => {
+  state.aiEnabled = state.aiEnabled !== true;
+  saveState();
+  renderAiToggle();
+  renderHistory();
+
+  if (state.aiEnabled) {
+    void ensurePolicyCatalog();
+  }
+});
+
 historyEl.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-copy-answer]");
+  const button = event.target.closest("[data-copy-answer], [data-copy-prompt], [data-copy-curl]");
   if (!button) return;
 
-  await copyText(button.dataset.copyAnswer || "");
+  const text = button.dataset.copyAnswer || button.dataset.copyPrompt || button.dataset.copyCurl || "";
+  await copyText(text);
   const original = button.textContent;
   button.textContent = "Copied";
   setTimeout(() => {
@@ -152,13 +171,18 @@ function renderHistory() {
     return;
   }
 
-  for (const message of state.messages) {
+  const lastAssistantIndex = [...state.messages]
+    .map((message, index) => (message.role === "assistant" ? index : -1))
+    .filter((index) => index !== -1)
+    .pop();
+
+  state.messages.forEach((message, index) => {
     if (message.role === "user") {
       historyEl.appendChild(createUserMessage(message.content));
     } else {
-      historyEl.appendChild(createAssistantMessage(message.report));
+      historyEl.appendChild(createAssistantMessage(message.report, state.aiEnabled && index === lastAssistantIndex));
     }
-  }
+  });
 
   updateTurnCount();
   scrollToBottom();
@@ -253,7 +277,7 @@ function replacePlaceholder(id, report) {
   const node = historyEl.querySelector(`[data-placeholder-id="${id}"]`);
   if (!node) return;
 
-  node.replaceWith(createAssistantMessage(report));
+  node.replaceWith(createAssistantMessage(report, state.aiEnabled));
   updateTurnCount();
   scrollToBottom();
 }
@@ -270,7 +294,7 @@ function createUserMessage(content) {
   return node;
 }
 
-function createAssistantMessage(rawReport) {
+function createAssistantMessage(rawReport, includeAiPack = false) {
   const report = rawReport || {};
   const answer = report.answer || "";
   const node = document.createElement("article");
@@ -286,9 +310,15 @@ function createAssistantMessage(rawReport) {
         </div>
         ${renderThinkingSummary(report)}
         ${renderEvidence(report)}
+        ${includeAiPack && !report.is_error ? renderAiPackShell() : ""}
       </div>
     </div>
   `;
+
+  if (includeAiPack && !report.is_error) {
+    void hydrateAiPack(node, report);
+  }
+
   return node;
 }
 
@@ -325,6 +355,28 @@ function renderEvidence(report) {
       </div>
     </details>
   `;
+}
+
+function renderAiPackShell() {
+  return `
+    <details class="ai-details" open>
+      <summary>Use AI prompt sample</summary>
+      <div class="ai-pack" data-ai-pack>
+        <p class="ai-pack-note">Loading the policy bundle so the prompt sample can include the exact source text.</p>
+      </div>
+    </details>
+  `;
+}
+
+async function hydrateAiPack(node, report) {
+  const slot = node.querySelector("[data-ai-pack]");
+  if (!slot) return;
+
+  const policies = await ensurePolicyCatalog();
+  if (!node.isConnected) return;
+
+  const pack = buildAiPackMarkup(report, policies);
+  slot.innerHTML = pack;
 }
 
 function renderHighlightedExcerpt(report) {
@@ -390,6 +442,13 @@ function renderThinkingToggle() {
   thinkingToggle.setAttribute("aria-pressed", String(isEnabled));
   thinkingToggleLabel.textContent = isEnabled ? "Thinking On" : "Show Thinking";
   thinkingToggle.classList.toggle("is-on", isEnabled);
+}
+
+function renderAiToggle() {
+  const isEnabled = state.aiEnabled === true;
+  aiToggle.setAttribute("aria-pressed", String(isEnabled));
+  aiToggleLabel.textContent = isEnabled ? "Use AI On" : "Use AI";
+  aiToggle.classList.toggle("is-on", isEnabled);
 }
 
 function updateTurnCount() {
@@ -460,17 +519,18 @@ async function copyText(text) {
 function loadState() {
   try {
     const raw = localStorage.getItem(stateKey);
-    if (!raw) return { messages: [], thinkingEnabled: false };
+    if (!raw) return { messages: [], thinkingEnabled: false, aiEnabled: false };
 
     const parsed = JSON.parse(raw);
-    if (!parsed || !Array.isArray(parsed.messages)) return { messages: [], thinkingEnabled: false };
+    if (!parsed || !Array.isArray(parsed.messages)) return { messages: [], thinkingEnabled: false, aiEnabled: false };
 
     return {
       messages: parsed.messages,
-      thinkingEnabled: parsed.thinkingEnabled === true
+      thinkingEnabled: parsed.thinkingEnabled === true,
+      aiEnabled: parsed.aiEnabled === true
     };
   } catch {
-    return { messages: [], thinkingEnabled: false };
+    return { messages: [], thinkingEnabled: false, aiEnabled: false };
   }
 }
 
@@ -484,6 +544,164 @@ function scrollToBottom() {
 
 function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function ensurePolicyCatalog() {
+  if (Array.isArray(policyCatalogState.docs)) {
+    return policyCatalogState.docs;
+  }
+
+  if (!policyCatalogState.promise) {
+    policyCatalogState.promise = fetch("/api/policies")
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const docs = await response.json();
+        policyCatalogState.docs = Array.isArray(docs) ? docs : [];
+        return policyCatalogState.docs;
+      })
+      .catch(() => {
+        policyCatalogState.docs = [];
+        return policyCatalogState.docs;
+      });
+  }
+
+  return policyCatalogState.promise;
+}
+
+function buildAiPackMarkup(report, policies) {
+  const { promptText, systemPrompt, userPrompt } = buildAiPromptText(report, policies);
+  const curlCommand = buildCurlCommand(systemPrompt, userPrompt);
+
+  return `
+    <div class="ai-block">
+      <div class="ai-block-header">
+        <strong>Prompt</strong>
+        <button class="mini-button" type="button" data-copy-prompt="${escapeAttribute(promptText)}">Copy prompt</button>
+      </div>
+      <pre class="ai-code">${escapeHtml(promptText)}</pre>
+    </div>
+    <div class="ai-block">
+      <div class="ai-block-header">
+        <strong>cURL</strong>
+        <button class="mini-button" type="button" data-copy-curl="${escapeAttribute(curlCommand)}">Copy cURL</button>
+      </div>
+      <pre class="ai-code">${escapeHtml(curlCommand)}</pre>
+    </div>
+  `;
+}
+
+function buildAiPromptText(report, policies) {
+  const useFullPolicyBundle = shouldUseFullPolicyBundle(report);
+  const question = report.question || "Unknown question";
+  const sourceLines = renderSourceSummary(report.sources);
+  const policyContext = useFullPolicyBundle
+    ? renderFullPolicyBundle(policies)
+    : renderRelevantPolicyContext(report);
+
+  const systemPrompt = [
+    "You are PolicyPilot, a careful policy assistant.",
+    "Answer only from the provided policy context.",
+    "If the context is weak or unrelated, say you could not find a grounded policy answer.",
+    "Prefer exact policy language, include limits and exceptions, and keep the answer concise."
+  ].join(" ");
+
+  const userPrompt = [
+    `Question: ${question}`,
+    "",
+    "Retrieved sources:",
+    sourceLines || "No sources returned.",
+    "",
+    useFullPolicyBundle ? "Full policy bundle:" : "Relevant policy excerpt:",
+    policyContext,
+    "",
+    "Answer format:",
+    "- Start with the direct answer.",
+    "- Quote the exact supporting line or clause.",
+    "- If there is a limit or exception, state it clearly.",
+    "- If the policy evidence is not strong enough, say so instead of guessing."
+  ].join("\n");
+
+  const promptText = [
+    "System:",
+    systemPrompt,
+    "",
+    "User:",
+    userPrompt
+  ].join("\n");
+
+  return {
+    promptText,
+    systemPrompt,
+    userPrompt
+  };
+}
+
+function buildCurlCommand(systemPrompt, userPrompt) {
+  const body = JSON.stringify({
+    model: "gpt-4.1-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ]
+  }, null, 2);
+
+  return [
+    "export OPENAI_API_KEY=sk-your-openai-token-here",
+    "",
+    "curl https://api.openai.com/v1/chat/completions \\",
+    '  -H "Content-Type: application/json" \\',
+    '  -H "Authorization: Bearer $OPENAI_API_KEY" \\',
+    "  -d @- <<'JSON'",
+    body,
+    "JSON"
+  ].join("\n");
+}
+
+function renderRelevantPolicyContext(report) {
+  const excerpt = String(report.relevant_excerpt || "").trim();
+  if (!excerpt) {
+    return "No relevant excerpt was returned.";
+  }
+
+  return excerpt;
+}
+
+function renderFullPolicyBundle(policies) {
+  if (!Array.isArray(policies) || policies.length === 0) {
+    return "Policy bundle unavailable.";
+  }
+
+  return policies.map((policy) => [
+    `# ${policy.title} (${policy.id})`,
+    String(policy.body || "").trim()
+  ].join("\n")).join("\n\n---\n\n");
+}
+
+function renderSourceSummary(sources) {
+  if (!Array.isArray(sources) || sources.length === 0) {
+    return "";
+  }
+
+  return sources.map((source) => {
+    const score = Number(source.score);
+    const scoreText = Number.isFinite(score) ? score.toFixed(3) : "n/a";
+    const section = source.section ? ` | ${source.section}` : "";
+    return `- ${source.title} (${source.document_id}${section}) similarity ${scoreText}`;
+  }).join("\n");
+}
+
+function shouldUseFullPolicyBundle(report) {
+  if (!report || report.is_error) return false;
+
+  const excerpt = String(report.relevant_excerpt || "").trim();
+  if (!excerpt) return true;
+
+  const sources = Array.isArray(report.sources) ? report.sources : [];
+  const topScore = sources.length ? Number(sources[0].score) : 0;
+  return !Number.isFinite(topScore) || topScore < 0.24;
 }
 
 function extractTerms(value) {
