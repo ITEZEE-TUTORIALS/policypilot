@@ -45,11 +45,13 @@ const aiToggleLabel = document.getElementById("ai-toggle-label");
 const turnCountEl = document.getElementById("turn-count");
 
 const state = loadState();
+let isPinnedToBottom = true;
 
 renderThinkingToggle();
 renderAiToggle();
 renderSamples();
 renderHistory();
+resizeQuestionInput();
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -59,6 +61,7 @@ form.addEventListener("submit", async (event) => {
 
   setBusy(true);
   questionInput.value = "";
+  resizeQuestionInput();
   appendUserMessage(question);
   saveState();
 
@@ -100,11 +103,27 @@ questionInput.addEventListener("keydown", (event) => {
   }
 });
 
+questionInput.addEventListener("input", () => {
+  resizeQuestionInput();
+});
+
+historyEl.addEventListener("scroll", () => {
+  isPinnedToBottom = isNearBottom();
+});
+
+window.addEventListener("resize", () => {
+  resizeQuestionInput();
+  if (isPinnedToBottom) {
+    scrollToBottom();
+  }
+});
+
 clearButton.addEventListener("click", () => {
   state.messages = [];
   saveState();
   renderHistory();
   questionInput.value = sampleQuestions[0];
+  resizeQuestionInput();
   questionInput.focus();
 });
 
@@ -157,6 +176,8 @@ function renderSamples() {
 }
 
 function renderHistory() {
+  const previousScrollTop = historyEl.scrollTop;
+  const previousScrollHeight = historyEl.scrollHeight;
   historyEl.innerHTML = "";
 
   if (state.messages.length === 0) {
@@ -185,7 +206,13 @@ function renderHistory() {
   });
 
   updateTurnCount();
-  scrollToBottom();
+
+  if (isPinnedToBottom) {
+    scrollToBottom();
+  } else {
+    const delta = historyEl.scrollHeight - previousScrollHeight;
+    historyEl.scrollTop = Math.max(0, previousScrollTop + delta);
+  }
 }
 
 function appendUserMessage(content) {
@@ -362,7 +389,7 @@ function renderAiPackShell() {
     <details class="ai-details" open>
       <summary>Use AI prompt sample</summary>
       <div class="ai-pack" data-ai-pack>
-        <p class="ai-pack-note">Loading the policy bundle so the prompt sample can include the exact source text.</p>
+        <p class="ai-pack-note">Preparing the RIG handoff so the prompt sample can be copied directly.</p>
       </div>
     </details>
   `;
@@ -372,11 +399,10 @@ async function hydrateAiPack(node, report) {
   const slot = node.querySelector("[data-ai-pack]");
   if (!slot) return;
 
-  const policies = await ensurePolicyCatalog();
+  const pack = report.rig_pack || await buildLegacyRigPack(report);
   if (!node.isConnected) return;
 
-  const pack = buildAiPackMarkup(report, policies);
-  slot.innerHTML = pack;
+  slot.innerHTML = buildAiPackMarkup(pack);
 }
 
 function renderHighlightedExcerpt(report) {
@@ -540,10 +566,23 @@ function saveState() {
 
 function scrollToBottom() {
   historyEl.scrollTop = historyEl.scrollHeight;
+  isPinnedToBottom = true;
 }
 
 function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function resizeQuestionInput() {
+  if (!questionInput) return;
+
+  questionInput.style.height = "auto";
+  const maxHeight = 128;
+  questionInput.style.height = `${Math.min(questionInput.scrollHeight, maxHeight)}px`;
+}
+
+function isNearBottom(threshold = 24) {
+  return historyEl.scrollHeight - historyEl.scrollTop - historyEl.clientHeight <= threshold;
 }
 
 async function ensurePolicyCatalog() {
@@ -571,26 +610,45 @@ async function ensurePolicyCatalog() {
   return policyCatalogState.promise;
 }
 
-function buildAiPackMarkup(report, policies) {
-  const { promptText, systemPrompt, userPrompt } = buildAiPromptText(report, policies);
-  const curlCommand = buildCurlCommand(systemPrompt, userPrompt);
+function buildAiPackMarkup(pack) {
+  const note = pack.uses_full_policy_bundle
+    ? "RIG expanded the prompt to the full policy bundle because retrieval confidence was low."
+    : "RIG kept the prompt focused on the strongest excerpt and wrapped it for direct reuse.";
 
   return `
+    <p class="ai-pack-note">${escapeHtml(note)}</p>
     <div class="ai-block">
       <div class="ai-block-header">
-        <strong>Prompt</strong>
-        <button class="mini-button" type="button" data-copy-prompt="${escapeAttribute(promptText)}">Copy prompt</button>
+        <div class="ai-block-title">
+          <strong>Prompt</strong>
+          <span class="ai-rig-pill">${pack.uses_full_policy_bundle ? "RIG · full bundle" : "RIG · focused excerpt"}</span>
+        </div>
+        <button class="mini-button" type="button" data-copy-prompt="${escapeAttribute(pack.prompt_text)}">Copy prompt</button>
       </div>
-      <pre class="ai-code">${escapeHtml(promptText)}</pre>
+      <pre class="ai-code">${escapeHtml(pack.prompt_text)}</pre>
     </div>
     <div class="ai-block">
       <div class="ai-block-header">
         <strong>cURL</strong>
-        <button class="mini-button" type="button" data-copy-curl="${escapeAttribute(curlCommand)}">Copy cURL</button>
+        <button class="mini-button" type="button" data-copy-curl="${escapeAttribute(pack.curl_command)}">Copy cURL</button>
       </div>
-      <pre class="ai-code">${escapeHtml(curlCommand)}</pre>
+      <pre class="ai-code">${escapeHtml(pack.curl_command)}</pre>
     </div>
   `;
+}
+
+async function buildLegacyRigPack(report) {
+  const policies = await ensurePolicyCatalog();
+  const { promptText, systemPrompt, userPrompt } = buildAiPromptText(report, policies);
+  const curlCommand = buildCurlCommand(systemPrompt, userPrompt);
+
+  return {
+    uses_full_policy_bundle: shouldUseFullPolicyBundle(report),
+    system_prompt: systemPrompt,
+    user_prompt: userPrompt,
+    prompt_text: promptText,
+    curl_command: curlCommand
+  };
 }
 
 function buildAiPromptText(report, policies) {

@@ -90,10 +90,12 @@ That is useful when your pipeline has multiple moving parts and you want fewer s
 If you use RIG, think of it as the conductor.
 
 - Rust provides the instruments.
-- RIG coordinates the steps.
+- `src/rig.rs` coordinates the handoff.
 - Retrieval, prompting, and tool use stay organized.
 
 That makes it easier to explain the system without hiding the engineering.
+
+For a deeper walkthrough, see [rig.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/rig.md).
 
 ---
 
@@ -168,6 +170,8 @@ That is enough to demonstrate the idea without getting bloated.
 - [src/store.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/store.rs) keeps the in-memory vector store.
 - [src/retrieve.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/retrieve.rs) searches for the best matches.
 - [src/answer.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/answer.rs) formats the grounded response.
+- [src/rig.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/rig.rs) builds the RIG prompt pack and cURL handoff.
+- [rig.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/rig.md) explains the orchestration layer in presentation-friendly terms.
 - [data/sources/gitlab/global_travel_expense.html](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/data/sources/gitlab/global_travel_expense.html) is the downloaded handbook page.
 - [data/sources/gitlab/travel_safety.html](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/data/sources/gitlab/travel_safety.html) is the downloaded travel safety page.
 - [data/gitlab/global_travel_expense.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/data/gitlab/global_travel_expense.md) is the cleaned policy excerpt used by the demo.
@@ -203,7 +207,8 @@ policypilot/
 │  ├─ embed.rs
 │  ├─ store.rs
 │  ├─ retrieve.rs
-│  └─ answer.rs
+│  ├─ answer.rs
+│  └─ rig.rs
 ├─ data/
 │  ├─ gitlab/
 │  └─ sources/gitlab/
@@ -225,4 +230,3 @@ PolicyPilot is a clean Rust RAG demo that shows how policy docs can become relia
 Open `http://127.0.0.1:7878` in a browser to test the demo.
 
 The UI is a single-screen chat demo. It keeps attention on the conversation, supports sample prompts, keeps evidence collapsed inside each answer, offers an optional Thinking toggle to show the RAG flow, copies answers, and exports a transcript for presenter review.
-# policypilot

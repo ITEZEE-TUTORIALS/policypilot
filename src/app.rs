@@ -1,5 +1,5 @@
-use crate::{answer, chunk, embed, ingest, retrieve, store};
 use crate::answer::AnswerReport;
+use crate::{answer, chunk, embed, ingest, retrieve, rig, store};
 
 pub const SAMPLE_QUESTIONS: [&str; 3] = [
     "Can I expense a hotel minibar?",
@@ -13,5 +13,7 @@ pub fn answer_question(question: &str) -> AnswerReport {
     let query_embedding = embed::embed_query_text(question);
     let store = store::VectorStore::from_chunks(chunks);
     let matches = retrieve::search(&store, &query_embedding, usize::MAX);
-    answer::draft_answer(question, &matches)
+    let mut report = answer::draft_answer(question, &matches);
+    report.rig_pack = Some(rig::build_rig_pack(&report, &documents));
+    report
 }

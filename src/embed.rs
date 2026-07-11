@@ -42,7 +42,11 @@ fn normalize_token(token: &str) -> String {
 fn tokenize(text: &str, expand_query_terms: bool) -> Vec<String> {
     let mut tokens = Vec::new();
 
-    for token in text.split_whitespace().map(normalize_token).filter(|token| !token.is_empty()) {
+    for token in text
+        .split_whitespace()
+        .map(normalize_token)
+        .filter(|token| !token.is_empty())
+    {
         tokens.push(token.clone());
 
         if expand_query_terms {
@@ -55,32 +59,21 @@ fn tokenize(text: &str, expand_query_terms: bool) -> Vec<String> {
 
 fn expand_token(token: &str) -> Vec<String> {
     match token {
-        "drink" | "drinks" | "beverage" | "beverages" => vec![
-            "alcohol".to_string(),
-            "purchase".to_string(),
-        ],
-        "buy" | "bought" | "purchase" | "purchased" => vec![
-            "expense".to_string(),
-            "purchase".to_string(),
-        ],
-        "expense" | "expenses" => vec![
-            "reimbursement".to_string(),
-        ],
-        "reimbursable" | "reimbursement" => vec![
-            "expense".to_string(),
-        ],
+        "drink" | "drinks" | "beverage" | "beverages" => {
+            vec!["alcohol".to_string(), "purchase".to_string()]
+        }
+        "buy" | "bought" | "purchase" | "purchased" => {
+            vec!["expense".to_string(), "purchase".to_string()]
+        }
+        "expense" | "expenses" => vec!["reimbursement".to_string()],
+        "reimbursable" | "reimbursement" => vec!["expense".to_string()],
         "unsafe" | "safety" | "security" => vec![
             "travel".to_string(),
             "security".to_string(),
             "safety".to_string(),
         ],
-        "minibar" => vec![
-            "incidentals".to_string(),
-            "personal".to_string(),
-        ],
-        "parking" => vec![
-            "transportation".to_string(),
-        ],
+        "minibar" => vec!["incidentals".to_string(), "personal".to_string()],
+        "parking" => vec!["transportation".to_string()],
         _ => Vec::new(),
     }
 }

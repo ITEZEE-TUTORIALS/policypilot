@@ -1,6 +1,6 @@
 # PolicyPilot Project Glossary
 
-This glossary combines the project data map and the core Rust/RAG concepts in one place.
+This glossary combines the project data map, the Rust project anatomy, and the core Rust/RAG concepts in one place.
 
 ---
 
@@ -78,7 +78,17 @@ This glossary combines the project data map and the core Rust/RAG concepts in on
 
 ---
 
-### 8. Final answer
+### 8. RIG handoff
+
+#### `src/rig.rs`
+
+- What it is: the orchestration layer that turns retrieved evidence into a copy-paste AI prompt pack and cURL handoff.
+- Why it matters: it shows how the demo bridges grounded retrieval to an external model without hiding the workflow.
+- Analogy: the **dispatch desk** that packages the right evidence and sends it to the next specialist.
+
+---
+
+### 9. Final answer
 
 #### `src/answer.rs`
 
@@ -88,7 +98,7 @@ This glossary combines the project data map and the core Rust/RAG concepts in on
 
 ---
 
-### 9. Demo entry point
+### 10. Demo entry point
 
 #### `src/main.rs`
 
@@ -98,7 +108,7 @@ This glossary combines the project data map and the core Rust/RAG concepts in on
 
 ---
 
-### 10. Presentation assets
+### 11. Presentation assets
 
 #### `PRESENTATION_OUTLINE.md`
 #### `SPEAKER_NOTES.md`
@@ -110,7 +120,99 @@ This glossary combines the project data map and the core Rust/RAG concepts in on
 
 ---
 
-## Part 2: Core Concepts
+## Part 2: Rust Project Anatomy
+
+### 1. Cargo manifest
+
+#### `Cargo.toml`
+
+- What it is: the project manifest that tells Cargo the package name, edition, dependencies, and metadata.
+- Why it matters: this is the blueprint Cargo reads before it builds anything.
+- Analogy: the **project passport** that says who you are and what tools you are allowed to bring.
+
+---
+
+### 2. Locked dependencies
+
+#### `Cargo.lock`
+
+- What it is: the exact dependency snapshot Cargo resolved for this project.
+- Why it matters: it makes builds repeatable so the same code keeps using the same crate versions.
+- Analogy: the **sealed parts list** for a machine order.
+
+---
+
+### 3. Build output root
+
+#### `target/`
+
+- What it is: Cargo’s output directory for compiled binaries, libraries, caches, and build metadata.
+- Why it matters: this is where the results of `cargo build`, `cargo test`, and `cargo run` land.
+- Analogy: the **workshop output shelf** where finished pieces are stored.
+
+---
+
+### 4. Debug build profile
+
+#### `target/debug/`
+
+- What it is: the default development build directory.
+- Why it matters: debug builds are faster to compile and easier to inspect while you are iterating.
+- Analogy: the **rehearsal stage** before the polished performance.
+
+---
+
+### 5. Release build profile
+
+#### `target/release/`
+
+- What it is: the optimized production build directory.
+- Why it matters: release builds are slower to compile but faster to run.
+- Analogy: the **final show version** after the rehearsal cut is polished.
+
+---
+
+### 6. Build-script outputs
+
+#### `target/debug/build/`
+
+- What it is: the output area for build scripts and generated helper artifacts.
+- Why it matters: crates with `build.rs`, native libraries, or generated code often leave work here.
+- Analogy: the **side room** where custom tools are prepared before the main assembly.
+
+---
+
+### 7. Compiled dependencies
+
+#### `target/debug/deps/`
+
+- What it is: the folder that holds compiled crate dependencies and hashed artifact copies.
+- Why it matters: Cargo uses these artifacts to link your binary and avoid rebuilding everything from scratch.
+- Analogy: the **labeled storage bins** holding the parts the assembler needs.
+
+---
+
+### 8. Fingerprints
+
+#### `target/debug/.fingerprint/`
+
+- What it is: metadata that tracks what changed for each crate and artifact.
+- Why it matters: Cargo uses fingerprints to decide what must be rebuilt.
+- Analogy: the **inspection tags** attached to each package.
+
+---
+
+### 9. Incremental compilation cache
+
+#### `target/debug/incremental/`
+
+- What it is: the cache that stores partial compilation state for faster rebuilds.
+- Why it matters: incremental compilation speeds up the edit-build-run loop during development.
+- Analogy: a **memory of the last assembly step** so the machine does not start from zero every time.
+
+---
+
+## Part 3: Core Concepts
 
 ### 1. RAG
 
@@ -266,4 +368,4 @@ This glossary combines the project data map and the core Rust/RAG concepts in on
 
 ## One-line model
 
-Source pages become cleaned excerpts, excerpts become chunks, chunks become embeddings, embeddings live in a vector store, retrieval finds the best matches, and the answer is assembled from those matches. RAG asks the librarian, RIG keeps the workflow organized, Rust keeps the machinery reliable, and ownership/borrowing plus `Option`/`Struct`/`Vec` keep the data shapes explicit and safe.
+Source pages become cleaned excerpts, excerpts become chunks, chunks become embeddings, embeddings live in a vector store, retrieval finds the best matches, and the answer is assembled from those matches. RAG asks the librarian, RIG keeps the workflow organized, Rust keeps the machinery reliable, Cargo keeps the build reproducible, `target/` holds the generated artifacts, and ownership/borrowing plus `Option`/`Struct`/`Vec` keep the data shapes explicit and safe.

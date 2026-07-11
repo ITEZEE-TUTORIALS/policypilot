@@ -1,4 +1,5 @@
 use crate::retrieve::RetrievedChunk;
+use crate::rig::RigPack;
 const MIN_GROUNDED_SCORE: i32 = 10;
 
 #[derive(Debug, Clone)]
@@ -8,6 +9,7 @@ pub struct AnswerReport {
     pub relevant_excerpt: String,
     pub sources: Vec<RetrievedChunk>,
     pub top_match_title: Option<String>,
+    pub rig_pack: Option<RigPack>,
 }
 
 impl AnswerReport {
@@ -66,6 +68,7 @@ pub fn draft_answer(question: &str, matches: &[RetrievedChunk]) -> AnswerReport 
             .unwrap_or_default(),
         sources: matches.to_vec(),
         top_match_title: grounded_match.map(|best| best.title.clone()),
+        rig_pack: None,
     }
 }
 
@@ -93,12 +96,19 @@ fn summarize_answer(question: &str, policy_text: &str) -> String {
     }
 
     if cleaned_lower.contains("contact people safety")
-        || (cleaned_lower.contains("safety") && cleaned_lower.contains("security") && cleaned_lower.contains("travel"))
+        || (cleaned_lower.contains("safety")
+            && cleaned_lower.contains("security")
+            && cleaned_lower.contains("travel"))
     {
-        return format!("If travel feels unsafe, contact People Safety & Security for help. {}", cleaned_line);
+        return format!(
+            "If travel feels unsafe, contact People Safety & Security for help. {}",
+            cleaned_line
+        );
     }
 
-    if cleaned_lower.contains("receipts are required") || (cleaned_lower.contains("receipt") && cleaned_lower.contains("required")) {
+    if cleaned_lower.contains("receipts are required")
+        || (cleaned_lower.contains("receipt") && cleaned_lower.contains("required"))
+    {
         if let Some(limit_clause) = extract_limit_clause(&cleaned_line) {
             return format!("Yes. Receipts are required {}.", limit_clause);
         }
@@ -128,7 +138,10 @@ fn summarize_answer(question: &str, policy_text: &str) -> String {
         }
 
         if let Some(limit_clause) = extract_limit_clause(&cleaned_line) {
-            return format!("Yes, as long as it stays within the stated limit: {}.", limit_clause);
+            return format!(
+                "Yes, as long as it stays within the stated limit: {}.",
+                limit_clause
+            );
         }
 
         if let Some(condition_clause) = extract_clause_after(&cleaned_line, "when ") {
@@ -163,7 +176,11 @@ fn best_policy_match(question: &str, matches: &[RetrievedChunk]) -> Option<Retri
         .max_by(|left, right| {
             left.0
                 .cmp(&right.0)
-                .then_with(|| left.1.partial_cmp(&right.1).unwrap_or(std::cmp::Ordering::Equal))
+                .then_with(|| {
+                    left.1
+                        .partial_cmp(&right.1)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
                 .then_with(|| left.2.title.cmp(&right.2.title))
         })
         .map(|(_, _, chunk)| chunk)
@@ -222,7 +239,8 @@ fn best_policy_line(question: &str, policy_text: &str) -> Option<(i32, String)> 
                 score += 12;
             }
 
-            if question_terms.contains("transportation") && cleaned_lower.contains("transportation") {
+            if question_terms.contains("transportation") && cleaned_lower.contains("transportation")
+            {
                 score += 10;
             }
 
@@ -237,16 +255,20 @@ fn best_policy_line(question: &str, policy_text: &str) -> Option<(i32, String)> 
 }
 
 fn cleanup_policy_line(line: &str) -> String {
-    line.trim_start()
-        .trim_start_matches('-')
-        .trim()
-        .to_string()
+    line.trim_start().trim_start_matches('-').trim().to_string()
 }
 
 fn extract_limit_clause(line: &str) -> Option<String> {
     let lower = line.to_lowercase();
 
-    for marker in ["up to ", "maximum ", "max ", "over ", "above ", "more than "] {
+    for marker in [
+        "up to ",
+        "maximum ",
+        "max ",
+        "over ",
+        "above ",
+        "more than ",
+    ] {
         if let Some(start) = lower.find(marker) {
             let clause = line[start..].trim().trim_end_matches('.');
             if !clause.is_empty() {
@@ -276,7 +298,13 @@ fn extract_terms(value: &str) -> std::collections::HashSet<String> {
     value
         .to_lowercase()
         .chars()
-        .map(|ch| if ch.is_ascii_alphanumeric() || ch.is_ascii_whitespace() || ch == '-' { ch } else { ' ' })
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch.is_ascii_whitespace() || ch == '-' {
+                ch
+            } else {
+                ' '
+            }
+        })
         .collect::<String>()
         .split_whitespace()
         .map(normalize_term)
@@ -289,32 +317,21 @@ fn expanded_question_terms(value: &str) -> std::collections::HashSet<String> {
     let additions: Vec<String> = terms
         .iter()
         .flat_map(|term| match term.as_str() {
-            "drink" | "drinks" | "beverage" | "beverages" => vec![
-                "alcohol".to_string(),
-                "purchase".to_string(),
-            ],
-            "buy" | "bought" | "purchase" | "purchased" => vec![
-                "expense".to_string(),
-                "purchase".to_string(),
-            ],
-            "expense" | "expenses" => vec![
-                "reimbursement".to_string(),
-            ],
-            "reimbursable" | "reimbursement" => vec![
-                "expense".to_string(),
-            ],
+            "drink" | "drinks" | "beverage" | "beverages" => {
+                vec!["alcohol".to_string(), "purchase".to_string()]
+            }
+            "buy" | "bought" | "purchase" | "purchased" => {
+                vec!["expense".to_string(), "purchase".to_string()]
+            }
+            "expense" | "expenses" => vec!["reimbursement".to_string()],
+            "reimbursable" | "reimbursement" => vec!["expense".to_string()],
             "unsafe" | "safety" | "security" => vec![
                 "travel".to_string(),
                 "security".to_string(),
                 "safety".to_string(),
             ],
-            "minibar" => vec![
-                "incidentals".to_string(),
-                "personal".to_string(),
-            ],
-            "parking" => vec![
-                "transportation".to_string(),
-            ],
+            "minibar" => vec!["incidentals".to_string(), "personal".to_string()],
+            "parking" => vec!["transportation".to_string()],
             _ => Vec::new(),
         })
         .collect();
@@ -339,8 +356,7 @@ fn normalize_term(term: &str) -> String {
 fn is_stop_term(term: &str) -> bool {
     matches!(
         term,
-        "a"
-            | "an"
+        "a" | "an"
             | "and"
             | "are"
             | "as"
@@ -535,8 +551,13 @@ Business expenses must be ordinary, necessary, and tied to approved work activit
             score: 0.51,
         };
 
-        let report = draft_answer("Is parking reimbursable?", &[unrelated_chunk, parking_chunk]);
-        assert!(report.answer.contains("Parking should be separated and categorized as transportation."));
+        let report = draft_answer(
+            "Is parking reimbursable?",
+            &[unrelated_chunk, parking_chunk],
+        );
+        assert!(report
+            .answer
+            .contains("Parking should be separated and categorized as transportation."));
         assert_eq!(
             report.top_match_title.as_deref(),
             Some("GitLab Global Travel and Expense Policy")

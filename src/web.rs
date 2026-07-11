@@ -2,9 +2,10 @@ use std::fmt::Write as _;
 use std::io::{self, BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
 
-use crate::app;
 use crate::answer::AnswerReport;
+use crate::app;
 use crate::ingest;
+use crate::rig::RigPack;
 
 const DEFAULT_ADDR: &str = "127.0.0.1:7878";
 const INDEX_HTML: &str = include_str!("../assets/ui/index.html");
@@ -53,7 +54,10 @@ fn handle_connection(mut stream: TcpStream) -> io::Result<()> {
     let mut parts = request_line.split_whitespace();
     let method = parts.next().unwrap_or("");
     let target = parts.next().unwrap_or("/");
-    let path = target.split_once('?').map(|(path, _)| path).unwrap_or(target);
+    let path = target
+        .split_once('?')
+        .map(|(path, _)| path)
+        .unwrap_or(target);
 
     let response = match (method, path) {
         ("GET", "/") => http_response(200, "text/html; charset=utf-8", INDEX_HTML),
@@ -107,6 +111,9 @@ fn render_report_json(report: &AnswerReport) -> String {
         None => json.push_str("null"),
     }
     json.push(',');
+    json.push_str("\"rig_pack\":");
+    json.push_str(&render_rig_pack_json(report.rig_pack.as_ref()));
+    json.push(',');
     json.push_str("\"sources\":[");
 
     for (index, source) in report.sources.iter().enumerate() {
@@ -134,6 +141,30 @@ fn render_report_json(report: &AnswerReport) -> String {
     }
 
     json.push(']');
+    json.push('}');
+    json
+}
+
+fn render_rig_pack_json(rig_pack: Option<&RigPack>) -> String {
+    let Some(rig_pack) = rig_pack else {
+        return "null".to_string();
+    };
+
+    let mut json = String::from("{");
+    json.push_str("\"uses_full_policy_bundle\":");
+    json.push_str(if rig_pack.uses_full_policy_bundle {
+        "true"
+    } else {
+        "false"
+    });
+    json.push(',');
+    push_json_field(&mut json, "system_prompt", &rig_pack.system_prompt);
+    json.push(',');
+    push_json_field(&mut json, "user_prompt", &rig_pack.user_prompt);
+    json.push(',');
+    push_json_field(&mut json, "prompt_text", &rig_pack.prompt_text);
+    json.push(',');
+    push_json_field(&mut json, "curl_command", &rig_pack.curl_command);
     json.push('}');
     json
 }

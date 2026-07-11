@@ -4,6 +4,7 @@ mod chunk;
 mod embed;
 mod ingest;
 mod retrieve;
+mod rig;
 mod store;
 mod web;
 
@@ -25,12 +26,7 @@ fn main() {
             }
         }
         Some("--cli") => {
-            let question = args
-                .iter()
-                .skip(1)
-                .cloned()
-                .collect::<Vec<_>>()
-                .join(" ");
+            let question = args.iter().skip(1).cloned().collect::<Vec<_>>().join(" ");
             let question = if question.trim().is_empty() {
                 "Can I expense a hotel minibar?".to_string()
             } else {
