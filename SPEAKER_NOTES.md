@@ -26,6 +26,7 @@
 
 ## Slide 7
 - Open the browser UI and read the demo question out loud.
+- Turn on Thinking only when you want to show the RAG stages; leave it off when you want the fastest chat flow.
 - Pause before revealing the answer so the retrieval step feels meaningful.
 - Point to the answer card, the excerpt, and the source list as you explain each one.
 - Call out the chat history so the audience can see the assistant evolve turn by turn.

@@ -178,8 +178,8 @@ That is enough to demonstrate the idea without getting bloated.
 - [ALTERNATE_TOPIC.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/ALTERNATE_TOPIC.md) gives a contrasting manual-support framing.
 - [run.sh](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/run.sh) launches the whole app.
 - [assets/ui/index.html](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/assets/ui/index.html) is the static UI shell.
-- [assets/ui/styles.css](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/assets/ui/styles.css) holds the presentation styling.
-- [assets/ui/app.js](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/assets/ui/app.js) drives chat history and retrieval requests.
+- [assets/ui/styles.css](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/assets/ui/styles.css) holds the simplified single-screen chat styling.
+- [assets/ui/app.js](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/assets/ui/app.js) drives chat history, retrieval requests, compact evidence, optional thinking trace, copy, and transcript export.
 
 ---
 
@@ -224,5 +224,5 @@ PolicyPilot is a clean Rust RAG demo that shows how policy docs can become relia
 
 Open `http://127.0.0.1:7878` in a browser to test the demo.
 
-The UI keeps a visible conversation history, so each query reads like a small assistant session instead of a single form submission.
+The UI is a single-screen chat demo. It keeps attention on the conversation, supports sample prompts, keeps evidence collapsed inside each answer, offers an optional Thinking toggle to show the RAG flow, copies answers, and exports a transcript for presenter review.
 # policypilot

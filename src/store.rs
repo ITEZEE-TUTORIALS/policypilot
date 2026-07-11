@@ -1,5 +1,5 @@
 use crate::chunk::Chunk;
-use crate::embed::{cosine_similarity, embed_text, Embedding};
+use crate::embed::{cosine_similarity, embed_document_text, Embedding};
 use crate::retrieve::RetrievedChunk;
 
 #[derive(Debug, Clone)]
@@ -25,7 +25,7 @@ impl VectorStore {
                 title: chunk.title,
                 section: chunk.section,
                 text: chunk.text.clone(),
-                embedding: embed_text(&chunk.text),
+                embedding: embed_document_text(&chunk.text),
             })
             .collect();
 
