@@ -1,24 +1,49 @@
 mod answer;
+mod app;
 mod chunk;
 mod embed;
 mod ingest;
 mod retrieve;
 mod store;
+mod web;
 
 use std::env;
 
 fn main() {
-    let question = env::args()
-        .nth(1)
-        .unwrap_or_else(|| "Can I expense a hotel minibar?".to_string());
+    let args: Vec<String> = env::args().skip(1).collect();
 
-    // This is a presentation scaffold, so the data flow is intentionally simple.
-    let documents = ingest::load_demo_documents();
-    let chunks = chunk::split_documents(&documents);
-    let query_embedding = embed::embed_text(&question);
-    let store = store::VectorStore::from_chunks(chunks);
-    let matches = retrieve::search(&store, &query_embedding, 3);
-    let response = answer::draft_answer(&question, &matches);
+    match args.first().map(|value| value.as_str()) {
+        None | Some("--serve") => {
+            let addr = args
+                .get(1)
+                .map(|value| value.as_str())
+                .unwrap_or("127.0.0.1:7878");
 
-    println!("{response}");
+            if let Err(err) = web::run(Some(addr)) {
+                eprintln!("failed to start web UI: {err}");
+                std::process::exit(1);
+            }
+        }
+        Some("--cli") => {
+            let question = args
+                .iter()
+                .skip(1)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(" ");
+            let question = if question.trim().is_empty() {
+                "Can I expense a hotel minibar?".to_string()
+            } else {
+                question
+            };
+
+            let report = app::answer_question(&question);
+            println!("{}", report.plain_text());
+        }
+        Some(_) => {
+            let question = args.join(" ");
+            let report = app::answer_question(&question);
+            println!("{}", report.plain_text());
+        }
+    }
 }

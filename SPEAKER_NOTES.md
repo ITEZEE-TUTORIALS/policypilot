@@ -25,8 +25,10 @@
 - Use the conductor metaphor to explain orchestration without overcomplicating it.
 
 ## Slide 7
-- Read the demo question out loud.
+- Open the browser UI and read the demo question out loud.
 - Pause before revealing the answer so the retrieval step feels meaningful.
+- Point to the answer card, the excerpt, and the source list as you explain each one.
+- Call out the chat history so the audience can see the assistant evolve turn by turn.
 
 ## Slide 8
 - Point to the excerpt first, then the final answer.

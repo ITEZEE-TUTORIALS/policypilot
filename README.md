@@ -10,8 +10,12 @@ Instead of asking a model to remember every rule, PolicyPilot looks up the right
 This repository includes:
 
 - a compileable Rust prototype,
+- a browser-based UI demo,
 - markdown policy documents for retrieval,
+- downloaded GitLab handbook source pages under `data/sources/gitlab/`,
+- a merged project glossary with data and concept analogies,
 - a slide-by-slide deck outline,
+- a single runner script for launching the app,
 - and a presentation-friendly alternate framing if you want to compare audiences.
 
 ---
@@ -156,18 +160,26 @@ That is enough to demonstrate the idea without getting bloated.
 ## What is in this repo
 
 - [src/main.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/main.rs) wires the demo together.
+- [src/web.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/web.rs) serves the browser UI.
+- [src/app.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/app.rs) runs the shared answer pipeline.
 - [src/ingest.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/ingest.rs) loads the policy documents.
 - [src/chunk.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/chunk.rs) splits docs into chunks.
 - [src/embed.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/embed.rs) turns text into vectors.
 - [src/store.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/store.rs) keeps the in-memory vector store.
 - [src/retrieve.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/retrieve.rs) searches for the best matches.
 - [src/answer.rs](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/src/answer.rs) formats the grounded response.
-- [data/policies/travel_policy.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/data/policies/travel_policy.md) is the travel rule source.
-- [data/policies/expense_policy.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/data/policies/expense_policy.md) is the expense rule source.
-- [data/policies/pto_policy.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/data/policies/pto_policy.md) is the PTO source.
+- [data/sources/gitlab/global_travel_expense.html](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/data/sources/gitlab/global_travel_expense.html) is the downloaded handbook page.
+- [data/sources/gitlab/travel_safety.html](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/data/sources/gitlab/travel_safety.html) is the downloaded travel safety page.
+- [data/gitlab/global_travel_expense.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/data/gitlab/global_travel_expense.md) is the cleaned policy excerpt used by the demo.
+- [data/gitlab/travel_safety.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/data/gitlab/travel_safety.md) is the second source excerpt used by the demo.
+- [PROJECT_GLOSSARY.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/PROJECT_GLOSSARY.md) explains both the data artifacts and the core Rust and RAG concepts with analogies.
 - [PRESENTATION_OUTLINE.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/PRESENTATION_OUTLINE.md) is the slide deck draft.
 - [SPEAKER_NOTES.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/SPEAKER_NOTES.md) is the presenter cheat sheet.
 - [ALTERNATE_TOPIC.md](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/ALTERNATE_TOPIC.md) gives a contrasting manual-support framing.
+- [run.sh](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/run.sh) launches the whole app.
+- [assets/ui/index.html](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/assets/ui/index.html) is the static UI shell.
+- [assets/ui/styles.css](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/assets/ui/styles.css) holds the presentation styling.
+- [assets/ui/app.js](/Users/lakefront/Desktop/Dev/Rust/rust-bigdata-manager/assets/ui/app.js) drives chat history and retrieval requests.
 
 ---
 
@@ -179,9 +191,13 @@ policypilot/
 ├─ SPEAKER_NOTES.md
 ├─ PRESENTATION_OUTLINE.md
 ├─ ALTERNATE_TOPIC.md
+├─ PROJECT_GLOSSARY.md
+├─ run.sh
 ├─ Cargo.toml
 ├─ src/
 │  ├─ main.rs
+│  ├─ app.rs
+│  ├─ web.rs
 │  ├─ ingest.rs
 │  ├─ chunk.rs
 │  ├─ embed.rs
@@ -189,7 +205,8 @@ policypilot/
 │  ├─ retrieve.rs
 │  └─ answer.rs
 ├─ data/
-│  └─ policies/
+│  ├─ gitlab/
+│  └─ sources/gitlab/
 └─ assets/
 ```
 
@@ -198,4 +215,14 @@ policypilot/
 ## One-line summary
 
 PolicyPilot is a clean Rust RAG demo that shows how policy docs can become reliable, cited answers.
+
+## Run The UI
+
+```bash
+./run.sh
+```
+
+Open `http://127.0.0.1:7878` in a browser to test the demo.
+
+The UI keeps a visible conversation history, so each query reads like a small assistant session instead of a single form submission.
 # policypilot

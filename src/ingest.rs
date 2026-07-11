@@ -8,19 +8,14 @@ pub struct Document {
 pub fn load_demo_documents() -> Vec<Document> {
     vec![
         Document {
-            id: "policy-001",
-            title: "Travel Policy",
-            body: include_str!("../data/policies/travel_policy.md"),
+            id: "gitlab-policy-001",
+            title: "GitLab Global Travel and Expense Policy",
+            body: include_str!("../data/gitlab/global_travel_expense.md"),
         },
         Document {
-            id: "policy-002",
-            title: "Expense Policy",
-            body: include_str!("../data/policies/expense_policy.md"),
-        },
-        Document {
-            id: "policy-003",
-            title: "PTO Policy",
-            body: include_str!("../data/policies/pto_policy.md"),
+            id: "gitlab-policy-002",
+            title: "GitLab Travel Safety and Security",
+            body: include_str!("../data/gitlab/travel_safety.md"),
         },
     ]
 }

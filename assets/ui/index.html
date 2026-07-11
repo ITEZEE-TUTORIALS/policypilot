@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PolicyPilot</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <p class="badge-row">
+          <span class="badge"><strong>PolicyPilot</strong> UI demo</span>
+          <span class="badge"><strong>RAG</strong> + Rust + RIG</span>
+          <span class="badge"><strong>GitLab</strong> handbook data</span>
+        </p>
+        <h1 class="title">Open-book policy answers, from a single browser window.</h1>
+        <p class="lede">
+          Ask a question, retrieve the relevant policy, and see the grounded answer plus the supporting excerpt.
+          The page also shows the core ideas behind the pipeline so the demo doubles as a teaching aid.
+        </p>
+      </div>
+      <div class="card query-card">
+        <form id="question-form" class="field">
+          <label for="question">Ask PolicyPilot</label>
+          <input id="question" name="question" type="text" value="Can I expense a hotel minibar?">
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Run Retrieval</button>
+            <button class="btn btn-secondary" type="button" id="clear-chat">Clear Chat</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="card query-card">
+      <div class="field">
+        <label>Sample questions</label>
+        <div id="sample-questions" class="sample-links"></div>
+      </div>
+    </section>
+
+    <section class="chat-shell">
+      <article class="card chat-panel">
+        <div class="panel-header">
+          <h2>Conversation</h2>
+          <p class="lede">The browser keeps the dialog visible so the retrieval step feels like a real assistant session.</p>
+        </div>
+        <div id="chat-history" class="chat-history"></div>
+      </article>
+
+      <aside class="side">
+        <section class="card result">
+          <h3>How the demo works</h3>
+          <div class="stack">
+            <div class="concept">
+              <strong>RAG</strong>
+              Look it up first, then answer from source material.
+            </div>
+            <div class="concept">
+              <strong>RIG</strong>
+              Keep retrieval, prompting, and tools coordinated.
+            </div>
+            <div class="concept">
+              <strong>Rust</strong>
+              Keep the pipeline safe, fast, and easy to ship.
+            </div>
+            <div class="concept">
+              <strong>Ownership + Borrowing</strong>
+              Make memory handling explicit instead of implicit.
+            </div>
+            <div class="concept">
+              <strong>Structs, Vec, Option</strong>
+              Shape the data so the flow stays readable.
+            </div>
+          </div>
+        </section>
+
+        <section class="card result">
+          <h3>Project note</h3>
+          <p class="lede" style="margin:0;">
+            Use the same web page to test the real pipeline, then switch to the glossary and deck files when presenting.
+          </p>
+        </section>
+      </aside>
+    </section>
+
+    <div class="footer">
+      Built from public GitLab handbook pages, cleaned excerpts, and a Rust retrieval pipeline.
+    </div>
+  </main>
+</body>
+</html>

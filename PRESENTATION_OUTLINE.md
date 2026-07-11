@@ -158,13 +158,16 @@ Layout:
 - Side note showing the retrieval match
 
 On-slide:
-- "Can I expense a hotel minibar?"
-- Find the relevant policy text
-- Return a grounded answer
+- Open the browser UI
+- Ask: "Can I expense a hotel minibar?"
+- Show the retrieved policy text and grounded answer
+- Keep the conversation visible as a chat history
 
 Speaker notes:
 - Pause after the question to build anticipation.
 - Let the audience see the source before the answer appears.
+- Keep the browser visible while you point to the answer, excerpt, and sources.
+- Use the growing chat history to show that the assistant is answering in context, not as a one-off lookup.
 
 Visual cue:
 - A highlighted excerpt from the expense policy
